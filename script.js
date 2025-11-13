@@ -4,7 +4,6 @@ function autoAdjustTextarea(element) {
 }
 
 function displayMessage(message, type = 'error', linkElement = null) {
-    // FIX 1: Target the new notification-area for temporary messages
     const statusArea = document.getElementById('notification-area') || document.getElementById('playlist-status');
     if (!statusArea) {
         console.error("Display Message Error:", message);
@@ -24,9 +23,7 @@ function displayMessage(message, type = 'error', linkElement = null) {
         msgCard.innerHTML = `<p class="title" style="margin: 0; color: #fff;">${message}</p>`;
     }
 
-    // Insert the message right below the header
     statusArea.prepend(msgCard);
-    // These messages disappear after 8 seconds
     setTimeout(() => msgCard.remove(), 8000);
 }
 
@@ -36,8 +33,11 @@ async function startDownload() {
     const links = textarea.value.trim().split('\n').filter(l => l.length > 0);
     const resolution = document.getElementById('resolution-select').value;
     const format = document.getElementById('format-select').value;
-    const statusArea = document.getElementById('download-status');
+
+    const statusArea = document.getElementById('download-status'); 
+    
     const API_URL = 'https://protube-server.onrender.com';
+    
     if (links.length === 0) {
         displayMessage("Please paste at least one link.");
         return;
@@ -48,7 +48,14 @@ async function startDownload() {
 
     for (const link of links) {
         const card = createDownloadCard(link, resolution, format);
-        statusArea.prepend(card);
+ 
+        const heading = statusArea.querySelector('h3');
+        if (heading) {
+            heading.after(card);
+        } else {
+            statusArea.prepend(card);
+        }
+
 
         try {
             const infoResponse = await fetch(`${API_URL}/api/video_info`, {
@@ -58,7 +65,7 @@ async function startDownload() {
             });
 
             const infoData = await infoResponse.json();
-
+            
             if (infoResponse.ok && infoData.status === 'ready') {
                 updateDownloadCardInfo(card, infoData.title, infoData.thumbnail_url)
                 await startRealDownload(card, link, resolution, format);
@@ -81,13 +88,10 @@ async function startRealDownload(card, link, resolution, format) {
     const progressBar = card.querySelector('.progress-bar');
     const progressText = card.querySelector('.progress-text');
 
-    // Display the initial state
     progressText.textContent = `20% - Waiting for server response...`;
     progressBar.style.width = '20%';
     card.classList.remove('failed', 'completed');
 
-    // FIX 2: REMOVE the misleading 50% simulation. The client will now stay here 
-    // until the download is complete on the server side.
 
     try {
         const response = await fetch(`${API_URL}/api/download`, {
@@ -95,12 +99,9 @@ async function startRealDownload(card, link, resolution, format) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ link, resolution, format })
         });
-        
-        // No clearTimeout needed as the simulation is gone.
 
         if (response.ok) {
             const contentDisposition = response.headers.get('Content-Disposition');
-            // FIX 3: Ensure filename is extracted correctly from the header.
             const match = contentDisposition && contentDisposition.match(/filename=["']?(.+?)["']?$/i);
             const filename = match ? match[1] : `download_${Date.now()}.${format}`;
 
@@ -118,7 +119,6 @@ async function startRealDownload(card, link, resolution, format) {
 
             progressBar.style.width = '100%';
             card.classList.add('completed');
-            // FIX 4: Update final status text with the correct filename
             progressText.innerHTML = `100% - **Download Complete!** (${filename}) - Auto-download started.`;
 
         } else {
