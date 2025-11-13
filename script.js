@@ -4,7 +4,8 @@ function autoAdjustTextarea(element) {
 }
 
 function displayMessage(message, type = 'error', linkElement = null) {
-    const statusArea = document.getElementById('download-status') || document.getElementById('playlist-status');
+    // FIX 1: Target the new notification-area for temporary messages
+    const statusArea = document.getElementById('notification-area') || document.getElementById('playlist-status');
     if (!statusArea) {
         console.error("Display Message Error:", message);
         return;
@@ -23,7 +24,9 @@ function displayMessage(message, type = 'error', linkElement = null) {
         msgCard.innerHTML = `<p class="title" style="margin: 0; color: #fff;">${message}</p>`;
     }
 
+    // Insert the message right below the header
     statusArea.prepend(msgCard);
+    // These messages disappear after 8 seconds
     setTimeout(() => msgCard.remove(), 8000);
 }
 
@@ -78,29 +81,27 @@ async function startRealDownload(card, link, resolution, format) {
     const progressBar = card.querySelector('.progress-bar');
     const progressText = card.querySelector('.progress-text');
 
-    progressText.textContent = `20% - Connecting to stream...`;
+    // Display the initial state
+    progressText.textContent = `20% - Waiting for server response...`;
     progressBar.style.width = '20%';
     card.classList.remove('failed', 'completed');
 
-    try {
-        const downloadSim = setTimeout(() => {
-            if (!card.classList.contains('completed') && !card.classList.contains('failed')) {
-                progressText.textContent = `50% - Downloading file from server (this may take a minute)...`;
-                progressBar.style.width = '50%';
-            }
-        }, 1000);
+    // FIX 2: REMOVE the misleading 50% simulation. The client will now stay here 
+    // until the download is complete on the server side.
 
+    try {
         const response = await fetch(`${API_URL}/api/download`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ link, resolution, format })
         });
-
-        clearTimeout(downloadSim);
+        
+        // No clearTimeout needed as the simulation is gone.
 
         if (response.ok) {
             const contentDisposition = response.headers.get('Content-Disposition');
-            const match = contentDisposition && contentDisposition.match(/filename="(.+?)"/);
+            // FIX 3: Ensure filename is extracted correctly from the header.
+            const match = contentDisposition && contentDisposition.match(/filename=["']?(.+?)["']?$/i);
             const filename = match ? match[1] : `download_${Date.now()}.${format}`;
 
             const blob = await response.blob();
@@ -117,6 +118,7 @@ async function startRealDownload(card, link, resolution, format) {
 
             progressBar.style.width = '100%';
             card.classList.add('completed');
+            // FIX 4: Update final status text with the correct filename
             progressText.innerHTML = `100% - **Download Complete!** (${filename}) - Auto-download started.`;
 
         } else {
