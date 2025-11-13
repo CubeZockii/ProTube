@@ -34,7 +34,7 @@ async function startDownload() {
     const resolution = document.getElementById('resolution-select').value;
     const format = document.getElementById('format-select').value;
     const statusArea = document.getElementById('download-status');
-    const API_URL = 'https://protube-server-1.onrender.com';
+    const API_URL = 'https://protube-server.onrender.com';
     if (links.length === 0) {
         displayMessage("Please paste at least one link.");
         return;
@@ -74,7 +74,7 @@ async function startDownload() {
 }
 
 async function startRealDownload(card, link, resolution, format) {
-    const API_URL = 'https://protube-server-1.onrender.com';
+    const API_URL = 'https://protube-server.onrender.com';
     const progressBar = card.querySelector('.progress-bar');
     const progressText = card.querySelector('.progress-text');
 
@@ -177,7 +177,7 @@ async function startPlaylistDownload() {
     const resolution = document.getElementById('playlist-resolution-select').value;
     const format = document.getElementById('playlist-format-select').value;
     const statusArea = document.getElementById('playlist-status');
-    const API_URL = 'https://protube-server-1.onrender.com';
+    const API_URL = 'https://protube-server.onrender.com';
 
     if (playlistLink.length === 0) {
         displayMessage("Please paste a playlist link.");
