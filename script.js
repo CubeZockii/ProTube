@@ -1,3 +1,53 @@
+const API_URL = 'https://protube-server.onrender.com';
+const socket = io(API_URL, {
+    transports: ['websocket', 'polling']
+});
+
+let socketId = null; 
+
+const activeDownloads = new Map();
+
+socket.on('connect', () => {
+    socketId = socket.id;
+    console.log('Socket connected with ID:', socketId);
+});
+
+socket.on('disconnect', () => {
+    console.warn('Socket disconnected. Real-time progress updates are paused.');
+    socketId = null;
+});
+
+socket.on('progress_update', (data) => {
+    const card = activeDownloads.get(data.filename);
+    if (!card) return;
+
+    const progressBar = card.querySelector('.progress-bar');
+    const progressText = card.querySelector('.progress-text');
+
+    const progress = data.progress;
+    
+    progressBar.style.width = `${progress}%`;
+    
+    if (progress < 100) {
+        progressText.innerHTML = `${progress}% - Downloading... 
+            <span style="font-size:0.8em; color: #a0c4ff;">(${data.speed || 'N/A'} | ETA: ${data.eta || 'N/A'})</span>`;
+    } else {
+        progressText.innerHTML = `100% - **Processing Complete!** Waiting for file transfer...`;
+        card.classList.remove('failed');
+    }
+});
+
+socket.on('progress_error', (data) => {
+    const card = activeDownloads.get(data.filename);
+    if (!card) return;
+    
+    const errorMessage = data.error || 'Server-side download failed.';
+    updateDownloadCardError(card, errorMessage);
+    displayMessage(`Download failed for ${data.filename}: ${errorMessage}`);
+    activeDownloads.delete(data.filename);
+});
+
+
 function autoAdjustTextarea(element) {
     element.style.height = 'auto';
     element.style.height = (element.scrollHeight) + 'px';
@@ -33,11 +83,8 @@ async function startDownload() {
     const links = textarea.value.trim().split('\n').filter(l => l.length > 0);
     const resolution = document.getElementById('resolution-select').value;
     const format = document.getElementById('format-select').value;
+    const statusArea = document.getElementById('download-status');
 
-    const statusArea = document.getElementById('download-status'); 
-    
-    const API_URL = 'https://protube-server.onrender.com';
-    
     if (links.length === 0) {
         displayMessage("Please paste at least one link.");
         return;
@@ -46,9 +93,13 @@ async function startDownload() {
     textarea.value = '';
     autoAdjustTextarea(textarea);
 
+    if (!socketId) {
+        displayMessage("Socket connection not ready. Please wait a moment and try again.");
+        return;
+    }
+
     for (const link of links) {
         const card = createDownloadCard(link, resolution, format);
- 
         const heading = statusArea.querySelector('h3');
         if (heading) {
             heading.after(card);
@@ -56,6 +107,7 @@ async function startDownload() {
             statusArea.prepend(card);
         }
 
+        let downloadFilename = null;
 
         try {
             const infoResponse = await fetch(`${API_URL}/api/video_info`, {
@@ -65,10 +117,24 @@ async function startDownload() {
             });
 
             const infoData = await infoResponse.json();
-            
+
             if (infoResponse.ok && infoData.status === 'ready') {
-                updateDownloadCardInfo(card, infoData.title, infoData.thumbnail_url)
-                await startRealDownload(card, link, resolution, format);
+                updateDownloadCardInfo(card, infoData.title, infoData.thumbnail_url);
+                const ext = (format === 'mp3') ? 'mp3' : 'mp4';
+                const safeTitle = infoData.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                
+                if (format === 'mp3') {
+                     downloadFilename = `${safeTitle}.${ext}`;
+                } else if (resolution === 'best') {
+                     downloadFilename = `${safeTitle}_best.${ext}`;
+                } else {
+                     downloadFilename = `${safeTitle}_${resolution}.${ext}`;
+                }
+
+                activeDownloads.set(downloadFilename, card);
+                
+                await startRealDownload(card, link, resolution, format, downloadFilename);
+                
             } else {
                 const errorMessage = infoData.error || `Unknown Error (Status: ${infoResponse.status})`;
                 updateDownloadCardError(card, errorMessage);
@@ -79,31 +145,36 @@ async function startDownload() {
             updateDownloadCardError(card, `Network error or server unreachable during info fetch. Check your console.`);
             displayMessage(`Network error during info fetch: ${error.message}`);
             console.error('Download info fetch critical error:', error);
+        } finally {
+            if (downloadFilename) {
+                activeDownloads.delete(downloadFilename);
+            }
         }
     }
 }
 
-async function startRealDownload(card, link, resolution, format) {
-    const API_URL = 'https://protube-server.onrender.com';
+async function startRealDownload(card, link, resolution, format, downloadFilename) {
     const progressBar = card.querySelector('.progress-bar');
     const progressText = card.querySelector('.progress-text');
 
-    progressText.textContent = `20% - Waiting for server response...`;
-    progressBar.style.width = '20%';
+    progressText.textContent = `0% - Connecting to server...`;
+    progressBar.style.width = '0%';
     card.classList.remove('failed', 'completed');
-
 
     try {
         const response = await fetch(`${API_URL}/api/download`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-Socket-ID': socketId 
+            },
             body: JSON.stringify({ link, resolution, format })
         });
-
+        
         if (response.ok) {
             const contentDisposition = response.headers.get('Content-Disposition');
             const match = contentDisposition && contentDisposition.match(/filename=["']?(.+?)["']?$/i);
-            const filename = match ? match[1] : `download_${Date.now()}.${format}`;
+            const filename = match ? match[1] : downloadFilename;
 
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
@@ -129,7 +200,7 @@ async function startRealDownload(card, link, resolution, format) {
         }
 
     } catch (error) {
-        updateDownloadCardError(card, `A critical error occurred: ${error.message}`);
+        updateDownloadCardError(card, `A critical network error occurred: ${error.message}`);
         displayMessage(`Critical download error: ${error.message}`);
         console.error('Critical Download error:', error);
     }
@@ -151,9 +222,9 @@ function createDownloadCard(link, resolution, format) {
             </div>
         </div>
         <div class="progress-container">
-            <div class="progress-bar" style="width: 5%;"></div>
+            <div class="progress-bar" style="width: 0%;"></div>
         </div>
-        <p class="progress-text">5% - Initializing task...</p>
+        <p class="progress-text">0% - Initializing task...</p>
     `;
     return card;
 }
@@ -179,7 +250,7 @@ async function startPlaylistDownload() {
     const resolution = document.getElementById('playlist-resolution-select').value;
     const format = document.getElementById('playlist-format-select').value;
     const statusArea = document.getElementById('playlist-status');
-    const API_URL = 'https://protube-server.onrender.com';
+    const API_URL = 'https://protube-server.onrender.com'; 
 
     if (playlistLink.length === 0) {
         displayMessage("Please paste a playlist link.");
