@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProTube Downloader | Playlist</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <i class="fas fa-list-ul header-icon"></i>
+            <h1>ProTube Downloader</h1>
+            <nav class="main-nav">
+                <a class="nav-button" href="index.html">
+                    <i class="fas fa-download"></i> Video Download
+                </a>
+                <a class="nav-button active-page" href="playlist.html">
+                    <i class="fas fa-list-ul"></i> Playlist Download
+                </a>
+            </nav>
+        </header>
+
+        <div id="playlist" class="page active glass-effect">
+            <h2 class="section-title">YouTube Playlist Downloader</h2>
+            <input type="text" id="playlist-link" placeholder="Paste YouTube Playlist link here...">
+
+            <div class="controls">
+                <div class="selection-group">
+                    <div class="select-wrapper">
+                        <label for="playlist-resolution-select">Resolution:</label>
+                        <select id="playlist-resolution-select">
+                            <option value="best">Best Quality (Default)</option>
+                            <option value="720p">720p</option>
+                            <option value="360p">360p</option>
+                        </select>
+                    </div>
+
+                    <div class="select-wrapper">
+                        <label for="playlist-format-select">Format:</label>
+                        <select id="playlist-format-select">
+                            <option value="mp4">MP4 (Video)</option>
+                            <option value="mp3">MP3 (Audio Only)</option>
+                        </select>
+                    </div>
+                </div>
+                <button onclick="startPlaylistDownload()">
+                    <i class="fas fa-rocket"></i> Download Playlist
+                </button>
+            </div>
+            <p class="note">**Note:** Playlist downloads are processed on the server and require dedicated resources.
+                Status is currently simulated after queuing.</p>
+        </div>
+
+        <div id="playlist-status">
+            <h3>Playlist Status:</h3>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
