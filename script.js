@@ -1,12 +1,17 @@
-const API_URL = 'https://protube-server.onrender.com';
+// Global SocketIO and unique client ID
+const API_URL = 'https://protube-server.onrender.com'; // Use your actual Render URL
+// Initialize the Socket.IO client connection
+// FIX: Prioritize 'polling' for stability against gevent blocking/timeouts
 const socket = io(API_URL, {
-    transports: ['websocket', 'polling']
+    transports: ['polling', 'websocket']
 });
 
 let socketId = null; 
 
+// A map to store card elements keyed by the file name for real-time lookup
 const activeDownloads = new Map();
 
+// --- Socket Connection & Listeners ---
 socket.on('connect', () => {
     socketId = socket.id;
     console.log('Socket connected with ID:', socketId);
@@ -18,8 +23,12 @@ socket.on('disconnect', () => {
 });
 
 socket.on('progress_update', (data) => {
+    // FIX: This lookup requires the server-side filename to be an EXACT match
     const card = activeDownloads.get(data.filename);
-    if (!card) return;
+    if (!card) {
+        console.warn(`Progress update received for unknown file: ${data.filename}`);
+        return;
+    }
 
     const progressBar = card.querySelector('.progress-bar');
     const progressText = card.querySelector('.progress-text');
@@ -32,6 +41,7 @@ socket.on('progress_update', (data) => {
         progressText.innerHTML = `${progress}% - Downloading... 
             <span style="font-size:0.8em; color: #a0c4ff;">(${data.speed || 'N/A'} | ETA: ${data.eta || 'N/A'})</span>`;
     } else {
+        // This is the 100% mark *before* the file starts transferring over HTTP
         progressText.innerHTML = `100% - **Processing Complete!** Waiting for file transfer...`;
         card.classList.remove('failed');
     }
@@ -48,15 +58,18 @@ socket.on('progress_error', (data) => {
 });
 
 
+// --- General UI Functions ---
+
 function autoAdjustTextarea(element) {
     element.style.height = 'auto';
     element.style.height = (element.scrollHeight) + 'px';
 }
 
 function displayMessage(message, type = 'error', linkElement = null) {
-    const statusArea = document.getElementById('notification-area') || document.getElementById('playlist-status');
+    // Target the notification area for popups
+    const statusArea = document.getElementById('notification-area'); 
     if (!statusArea) {
-        console.error("Display Message Error:", message);
+        console.error("Display Message Error: Missing #notification-area");
         return;
     }
 
@@ -77,6 +90,8 @@ function displayMessage(message, type = 'error', linkElement = null) {
     setTimeout(() => msgCard.remove(), 8000);
 }
 
+
+// --- Download Functions ---
 
 async function startDownload() {
     const textarea = document.getElementById('video-links');
@@ -100,6 +115,7 @@ async function startDownload() {
 
     for (const link of links) {
         const card = createDownloadCard(link, resolution, format);
+        
         const heading = statusArea.querySelector('h3');
         if (heading) {
             heading.after(card);
@@ -110,6 +126,7 @@ async function startDownload() {
         let downloadFilename = null;
 
         try {
+            // 1. Get info and determine filename (for the map key)
             const infoResponse = await fetch(`${API_URL}/api/video_info`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -120,8 +137,11 @@ async function startDownload() {
 
             if (infoResponse.ok && infoData.status === 'ready') {
                 updateDownloadCardInfo(card, infoData.title, infoData.thumbnail_url);
+                
+                // 1. Prediction logic (MUST match server exactly!)
                 const ext = (format === 'mp3') ? 'mp3' : 'mp4';
-                const safeTitle = infoData.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                // FIX: Ensure strict sanitization and use .toLowerCase() to match server
+                const safeTitle = infoData.title.replace(/[^a-zA-Z0-9\s-]/gi, '').replace(/\s/g, '_').toLowerCase(); 
                 
                 if (format === 'mp3') {
                      downloadFilename = `${safeTitle}.${ext}`;
@@ -131,6 +151,7 @@ async function startDownload() {
                      downloadFilename = `${safeTitle}_${resolution}.${ext}`;
                 }
 
+                // Add card to the map for real-time updates
                 activeDownloads.set(downloadFilename, card);
                 
                 await startRealDownload(card, link, resolution, format, downloadFilename);
@@ -147,6 +168,7 @@ async function startDownload() {
             console.error('Download info fetch critical error:', error);
         } finally {
             if (downloadFilename) {
+                // Remove from map whether successful or failed
                 activeDownloads.delete(downloadFilename);
             }
         }
@@ -166,6 +188,7 @@ async function startRealDownload(card, link, resolution, format, downloadFilenam
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
+                // Send the unique client ID in the header
                 'X-Socket-ID': socketId 
             },
             body: JSON.stringify({ link, resolution, format })
@@ -173,9 +196,11 @@ async function startRealDownload(card, link, resolution, format, downloadFilenam
         
         if (response.ok) {
             const contentDisposition = response.headers.get('Content-Disposition');
+            // Use the determined filename, falling back to header extraction
             const match = contentDisposition && contentDisposition.match(/filename=["']?(.+?)["']?$/i);
             const filename = match ? match[1] : downloadFilename;
 
+            // The file is now being transferred over HTTP
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
 
@@ -195,6 +220,7 @@ async function startRealDownload(card, link, resolution, format, downloadFilenam
         } else {
             const errorData = await response.json();
             const errorMessage = errorData.error || response.statusText;
+            // When the HTTP download fails, update the card with the final error
             updateDownloadCardError(card, `Download Error: ${errorMessage}`);
             displayMessage(`Download failed: ${errorMessage}`);
         }
@@ -244,6 +270,8 @@ function updateDownloadCardError(card, message) {
     card.querySelector('.thumbnail').src = 'https://placehold.co/120x68/cc0000/ffffff?text=ERROR';
 }
 
+
+// --- Playlist Functions (Remain Simulated) ---
 
 async function startPlaylistDownload() {
     const playlistLink = document.getElementById('playlist-link').value.trim();
