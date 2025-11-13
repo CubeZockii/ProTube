@@ -1,10 +1,7 @@
-/* --- Global Reset & Professional Look: DEEP BLUE THEME --- */
 body {
     font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    /* Deep Blue Gradient (Original Theme) */
     background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #0f2027 100%);
     color: #e0f2f1;
-    /* Light contrast text */
     display: flex;
     justify-content: center;
     align-items: flex-start;
@@ -19,11 +16,9 @@ body {
     padding: 30px;
     border-radius: 20px;
     background: rgba(0, 0, 0, 0.4);
-    /* Dark base container */
     box-shadow: 0 15px 50px rgba(0, 0, 0, 0.7);
 }
 
-/* --- Header and Navigation --- */
 header {
     text-align: center;
     margin-bottom: 40px;
@@ -34,7 +29,6 @@ header {
 .header-icon {
     font-size: 2.5em;
     color: #4dcfff;
-    /* Cyan Accent */
     margin-bottom: 10px;
 }
 
@@ -58,7 +52,6 @@ h1 {
     background: none;
     border: none;
     color: #a0c4ff;
-    /* Light Blue link color */
     padding: 10px 20px;
     text-decoration: none;
     font-size: 1em;
@@ -77,13 +70,11 @@ h1 {
 
 .nav-button.active-page {
     background: #007bff;
-    /* Primary Blue Active Color */
     color: #fff;
     font-weight: 600;
     box-shadow: 0 4px 10px rgba(0, 123, 255, 0.5);
 }
 
-/* --- Glass Effect Content Card --- */
 .page {
     padding: 30px;
     margin-top: 20px;
@@ -100,7 +91,6 @@ h1 {
 
 .section-title {
     color: #4dcfff;
-    /* Cyan/Light Blue Accent */
     margin-top: 0;
     margin-bottom: 20px;
     font-weight: 500;
@@ -131,7 +121,6 @@ input[type="text"]:focus {
     box-shadow: 0 0 8px rgba(77, 207, 255, 0.8);
 }
 
-/* --- Controls Group and Select Boxes (UNMODIFIED) --- */
 .controls {
     display: flex;
     justify-content: space-between;
@@ -166,7 +155,6 @@ select {
     appearance: none;
     cursor: pointer;
     background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%234dcfff'%3e%3cpath d='M7 10l5 5 5-5H7z'/%3e%3c/svg%3e");
-    /* Cyan Arrow */
     background-repeat: no-repeat;
     background-position: right 10px top 50%;
     background-size: 12px;
@@ -174,12 +162,10 @@ select {
 
 select option {
     background: #203a43;
-    /* Darker option background */
 }
 
 button {
     background: linear-gradient(90deg, #007bff, #00c6ff);
-    /* Primary Blue Gradient */
     color: white;
     padding: 12px 30px;
     border: none;
@@ -200,7 +186,6 @@ button:hover {
     transform: translateY(-2px);
 }
 
-/* --- Download Status Area --- */
 #download-status h3,
 #playlist-status h3 {
     color: #a0c4ff;
@@ -210,23 +195,19 @@ button:hover {
     margin-bottom: 20px;
 }
 
-/* --- Individual Download Card (IMPROVED) --- */
 .download-card {
     padding: 20px;
     margin-bottom: 15px;
     transition: all 0.3s ease;
     border-left: 5px solid #007bff;
-    /* Blue border for active */
 }
 
 .download-card.completed {
     border-left: 5px solid #38c172;
-    /* Green border for completed */
 }
 
 .download-card.failed {
     border-left: 5px solid #cc0000;
-    /* Red border for failed */
 }
 
 .card-header {
@@ -239,7 +220,6 @@ button:hover {
 .thumbnail {
     width: 120px;
     height: 68px;
-    /* Standard 16:9 ratio */
     border-radius: 8px;
     object-fit: cover;
     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -249,7 +229,6 @@ button:hover {
 .info-group {
     flex-grow: 1;
     min-width: 0;
-    /* Ensures flex item shrinks properly */
 }
 
 .download-card .title {
@@ -268,7 +247,6 @@ button:hover {
     margin: 0;
 }
 
-/* --- Progress Bar (IMPROVED) --- */
 .progress-container {
     width: 100%;
     height: 10px;
@@ -281,7 +259,6 @@ button:hover {
 .progress-bar {
     height: 100%;
     background: linear-gradient(90deg, #1e90ff, #00c6ff);
-    /* Blue/Cyan gradient for progress */
     transition: width 0.5s ease;
     border-radius: 5px 0 0 5px;
 }
@@ -294,7 +271,6 @@ button:hover {
 
 .download-card.completed .progress-bar {
     background: linear-gradient(90deg, #38c172, #28a745);
-    /* Green gradient for completion */
 }
 
 .download-card.completed .progress-text {
@@ -303,7 +279,6 @@ button:hover {
 
 .download-card.failed .progress-bar {
     background: linear-gradient(90deg, #cc0000, #ff5555);
-    /* Red gradient for failure */
 }
 
 .download-card.failed .progress-text {
@@ -316,21 +291,16 @@ button:hover {
     margin-top: 20px;
 }
 
-/* --- FIX for Truncated Error Messages --- */
-
-/* Allows the pop-up (toast) message from displayMessage() to wrap */
 .download-card.error-message .title {
     white-space: normal;
     overflow: visible;
     text-overflow: unset;
 }
 
-/* Ensures the error message inside a failed download card also wraps */
 .download-card.failed .progress-text {
     white-space: normal;
 }
 
-/* --- Responsive adjustments --- */
 @media (max-width: 600px) {
     .controls {
         flex-direction: column;
